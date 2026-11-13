@@ -120,11 +120,7 @@ def _launch_l2norm_fwd_kernel(
     BT: int,
 ):
     NT = triton.cdiv(T, BT)
-    # the forward follows the fp32-accumulating reference (F.normalize(x.float())):
-    # torch_npu's bf16-input F.normalize rounds the norm to bf16 and differs by
-    # 1 bf16 ulp, so the LOWP norm-rounding branch must stay off here. The
-    # backward keeps its own dtype-driven LOWP VJP mimic below.
-    lowp = False
+    lowp = y.dtype != torch.float32
     for nt_off, nt_len in iter_axis_launch_chunks(axis_size=NT, other_grid_product=1, max_grid=ASCEND_MAX_GRID_DIM):
         l2norm_fwd_kernel[(nt_len,)](
             x=x, y=y, rstd=rstd, eps=eps, T=T, T_OFFSET=nt_off, D=D, BD=BD, BT=BT, LOWP=lowp,
